@@ -9,21 +9,30 @@ class Pod:
 
     @property
     def memory(self):
-        return self.request["Memory"]
+        return self.request["RAM"]
 
 
 class Node:
-    def __init__(self, name, configuration, pods):
+    def __init__(self, name, configuration, pods=None):
         self.name = name
         self.type = configuration["type"]
         self.cpu = configuration["CPU"]
         self.memory = configuration["RAM"]
-        self.pods = pods
+        self.price = configuration["price"]
+        self.pods = pods if pods else []
 
     @property
-    def get_available_cpu(self):
+    def available_cpu(self):
         return self.cpu - sum(x.cpu for x in self.pods)
 
     @property
-    def get_availbale_memory(self):
+    def availbale_memory(self):
         return self.memory - sum(x.memory for x in self.pods)
+
+    @property
+    def occupied_cpu(self):
+        return sum(x.cpu for x in self.pods)
+
+    @property
+    def occupied_memory(self):
+        return sum(x.memory for x in self.pods)

@@ -15,9 +15,9 @@ class GCPMonitor:
         self.zone = self.region + "-" + zone
         self._init_clients()
         self.flavor_pool = self._read_flavor_pool()
-        self.pricing_cache = defaultdict(dict)
-        self.machine_cache = {}
-        self.machine_price_cache = defaultdict(float)
+        self.machine_cache = self.fetch_machine_specs()
+        self.pricing_cache = self.fetch_pricing_data()
+        self.machine_price_cache = self.cal_VM_price()
 
     def _init_clients(self):
         self.compute_client = compute_v1.MachineTypesClient()
@@ -36,7 +36,7 @@ class GCPMonitor:
         We have already narrowed the range of VMs in project
         :return: A list containing names of flavors
         """
-        with open('./pre-defined-Flavors.json', 'r') as fp:
+        with open('../data/pre-defined-Flavors.json', 'r') as fp:
             gcp_flavors = json.load(fp)['gcp']
             logging.info(f"Flavor Pool Loaded as {gcp_flavors}")
             return gcp_flavors
@@ -70,11 +70,11 @@ class GCPMonitor:
         except Exception as e:
             logging.error(f"Error fetching specs in {self.region}: {str(e)}")
 
-        self.machine_cache = specs
         return specs
 
     def fetch_pricing_data(self):
         """获取计算引擎的定价数据"""
+        pricing_cache = defaultdict(dict)
         skus = self.billing_client.list_skus(parent=self.compute_service_id)
         skus = [sku
                 for sku in skus
@@ -86,9 +86,9 @@ class GCPMonitor:
         for sku in skus:
             entry = self._parse_sku(sku)
             if entry:
-                self.pricing_cache[entry['id']][entry['resource']] = entry['pricing_info']
+                pricing_cache[entry['id']][entry['resource']] = entry['pricing_info']
 
-        return self.pricing_cache
+        return pricing_cache
 
     def _parse_sku(self, sku):
         """解析单个SKU的数据结构"""
@@ -129,18 +129,24 @@ class GCPMonitor:
             return None
 
     def cal_VM_price(self):
+        machine_price_cache = []
         for type, VMs in self.machine_cache.items():
             cpu, ram = self.pricing_cache[type]['CPU'], self.pricing_cache[type]['RAM']
             for VM in VMs:
+                temp = {}
                 name = VM['name']
+                temp['type'] = name
                 vcpu, memory = VM['vcpu'], VM['memory_mb'] / 1024
-                self.machine_price_cache[name] = vcpu * cpu['hourly_rate'] + memory * ram['hourly_rate']
-                logging.info(f"{name} Calculated as {self.machine_price_cache[name]:.6f}")
+                temp["CPU"], temp["RAM"] = vcpu,  memory
+                price = vcpu * cpu['hourly_rate'] + memory * ram['hourly_rate']
+                temp["price"] = price
+                machine_price_cache.append(temp)
+                logging.info(f"{name} Calculated as {price:.6f}")
 
-        return self.machine_price_cache
+        return machine_price_cache
 
     def export(self):
-        with open("pricing.json",'w') as fp:
+        with open("../data/pricing.json", 'w') as fp:
             res = {'gcp': self.machine_price_cache}
             json.dump(res, fp)
 
@@ -148,12 +154,9 @@ class GCPMonitor:
 
 
 if __name__=="__main__":
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../configurations/single-cloud-ylxq-bdc460579827.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../configurations/single-cloud-ylxq-ed1608c43bb4.json"
     os.environ["GCP_PROJECT"] = "single-cloud-ylxq"  # 可选自定义项目变量
     gcp = GCPMonitor()
-    machine_list = gcp.fetch_machine_specs()
-    price = gcp.fetch_pricing_data()
-    machine_price = gcp.cal_VM_price()
     gcp.export()
 
 
