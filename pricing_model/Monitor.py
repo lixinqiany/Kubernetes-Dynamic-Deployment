@@ -22,6 +22,7 @@ class GCPMonitor:
     def _init_clients(self):
         self.compute_client = compute_v1.MachineTypesClient()
         self.billing_client = billing_v1.CloudCatalogClient()
+        self.instance_client = compute_v1.InstancesClient()
         logging.info("Connecting to Compute Client and Billing Client")
 
         services = list(self.billing_client.list_services())
@@ -81,7 +82,7 @@ class GCPMonitor:
                 if sku.category.usage_type=="OnDemand" and
                 self.region in sku.service_regions and
                 ("Instance Core" in sku.description or "Instance Ram" in sku.description) and
-                len(sku.description.split(" ")) == 6]
+                len(sku.description.split(" ")) <= 7]
 
         for sku in skus:
             entry = self._parse_sku(sku)
@@ -150,6 +151,24 @@ class GCPMonitor:
             res = {'gcp': self.machine_price_cache}
             json.dump(res, fp)
 
+    def get_instance_type(self):
+        """获取集群中已经创建的实例（以ip为主键）"""
+        ip2type = defaultdict(str)
+        try:
+            request = compute_v1.ListInstancesRequest(
+                project=self.project_id,
+                zone=self.zone
+            )
+            response = self.instance_client.list(request)
+            for instance in response:
+                type = instance.machine_type.split("/")[-1]
+                internal_ip = list(instance.network_interfaces.pb)[0].network_i_p
+                ip2type[internal_ip] = type
+            return ip2type
+        except Exception as e:
+            logging.error(f"获取实例失败: {e}")
+            return None
+
 
 
 
@@ -157,6 +176,7 @@ if __name__=="__main__":
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../configurations/single-cloud-ylxq-ed1608c43bb4.json"
     os.environ["GCP_PROJECT"] = "single-cloud-ylxq"  # 可选自定义项目变量
     gcp = GCPMonitor()
+    gcp.get_instance_type()
     gcp.export()
 
 

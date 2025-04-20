@@ -5,7 +5,7 @@
 - 通过Google提供的API访问GCP项目下的Billing Client和Compute Client对指定种类的机型进行价格监控。
   - 跳转Goolge定价网站：https://cloud.google.com/compute/all-pricing?hl=zh-CN#section-1
   - 但是**很奇怪**的一点是不是所有的在上述网站中的机型都在SKU API中可获得。但我又不想实现爬虫监听，所以最后手动筛选了可以从SKU API中估算定价的机器种类
-    - 通用类型机型：C4, N4, E2, C3
+    - 通用类型机型：C4, N4, E2, C3,N2D
     - 计算优化：C2D
     - 内存优化：M3 (太贵）
   - 表格中囊括的配置还是太多，需要根据任务缩小可选范围
@@ -43,7 +43,6 @@
 | c2d-standard-4 | 4    | 16  | 0.25776         | RAM 0.005619 / 1 gibibyte hour                |
 | c2d-standard-8 | 8    | 32  | 0.51552         |                                               |
 | M3             |      |     |                 | M3的RAM都是几百的，太大了，太贵了。直接不考虑 |
-
 
 - `compute_v1.ListMachineTypesRequest`构成一个查询“当前项目可以创建的机器实例”的请求，作为`compute client`的参数。
 - `billing_client.list_skus(parent=self.compute_service_id)`通过Compute Engine的服务id查找旗下所有的sku的定价

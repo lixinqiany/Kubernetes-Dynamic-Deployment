@@ -80,23 +80,22 @@ class CABFD:
         if node.name == "created":
             price = 1 - (0 / max(x.price for x in candidates))
 
-        return 0.3*ram_util + 0.2*cpu_util + 0.5 * price
+        return 1*ram_util + 1*cpu_util + 0.5 * price
 
 
 if __name__=="__main__":
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../configurations/single-cloud-ylxq-ed1608c43bb4.json"
     os.environ["GCP_PROJECT"] = "single-cloud-ylxq"  # 可选自定义项目变量
     cabfd = CABFD()
-    request1 = {"CPU":2, "RAM":0.5}
-    request2 = {"CPU":1, "RAM":2}
-    request3 = {"CPU":4, "RAM":1}
-    pods = [
-        Pod(request1),
-        Pod(request2),
-        Pod(request3),
-        Pod(request1),
-        Pod(request2),
-        Pod(request2),
-    ]
+    request1 = {"CPU": 0.7, "RAM": 0.2}
+    request2 = {"CPU": 1, "RAM": 0.7}
+    request3 = {"CPU":0.1, "RAM": 1}
+    request4 = {"CPU": 0.2, "RAM": 0.9}
+    setup = [20,20,40,5]
+    requests=[request1,request2,request3,request4]
+    pods=[]
+    for i, s in zip(setup, requests):
+        for _ in range(i):
+            pods.append(Pod(s))
     result = cabfd.optimize(pods)
     cabfd.summary(result)

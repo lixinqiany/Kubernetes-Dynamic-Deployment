@@ -1,7 +1,11 @@
 class Pod:
-    def __init__(self, request, limit=None):
+    def __init__(self, request: dict, limit=None, name=None):
         self.request = request
         self.limit = limit if limit else request
+        self.status = request.get("status", None)
+        self.namespace = request.get("namespace",None)
+        self.node = request.get("node", None)
+        self.name = request.get("name", None)
 
     @property
     def cpu(self):
@@ -11,15 +15,24 @@ class Pod:
     def memory(self):
         return self.request["RAM"]
 
+    def __str__(self):
+        return (f"Pod is {self.name}"
+                f"\n\t-> status:{self.status}"
+                f"\n\t-> requested CPU: {self.cpu}"
+                f"\n\t-> requested Memory: {self.memory}"
+                f"\n\t-> depolyed on {self.node}")
+
 
 class Node:
     def __init__(self, name, configuration, pods=None):
         self.name = name
-        self.type = configuration["type"]
+        self.type = configuration.get("type", None)
         self.cpu = configuration["CPU"]
         self.memory = configuration["RAM"]
-        self.price = configuration["price"]
+        self.price = configuration.get("price", None)
         self.pods = pods if pods else []
+        self.status = configuration.get("status", "NotReady")
+        self.internalIP = configuration.get("InternalIP", None)
 
     @property
     def available_cpu(self):
@@ -36,3 +49,11 @@ class Node:
     @property
     def occupied_memory(self):
         return sum(x.memory for x in self.pods)
+
+    def __str__(self):
+        return (f"Node is {self.name}"
+                f"\n\t type: {self.type}"
+                f"\n\t-> status:{self.status}"
+                f"\n\t-> CPU: {self.cpu}"
+                f"\n\t-> Memory: {self.memory}"
+                f"\n\t-> has pods {self.pods}")
